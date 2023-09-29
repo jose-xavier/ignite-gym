@@ -6,6 +6,8 @@ import { useFonts, Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/
 import { Loading } from '@components/Loading';
 
 import { THEME } from './src/theme';
+import { SignIn } from '@screens/SignIn';
+import { SignUp } from '@screens/SignUp';
 
 
 export default function App() {
@@ -20,7 +22,7 @@ export default function App() {
         translucent
       />
 
-      {fontIsLoaded ? <Loading /> : <Text>Hello Word!</Text>}
+      {!fontIsLoaded ? <Loading /> : <SignUp />}
     </NativeBaseProvider>
   );
 }
