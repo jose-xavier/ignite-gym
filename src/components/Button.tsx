@@ -16,7 +16,7 @@ export function Button({ title, variant = 'solid', ...rest }: Props) {
             _pressed={{
                 bg: variant === 'outline' ? "gray.500" : "green.700"
             }}
-
+            {...rest}
         >
             <Text
                 color={variant === 'outline' ? "green.500" : "white"}

@@ -1,11 +1,25 @@
-import { Center, Heading, Image, ScrollView, Text, VStack } from 'native-base';
+import { Center, Heading, Image, ScrollView, Text, VStack } from 'native-base'
+
+import { useNavigation } from '@react-navigation/native'
+import { AuthNavigatorRoutesProps } from '../routes/auth.routes'
 
 import BackgroundImg from './../assets/background.png'
 import Logo from './../assets/logo.svg'
-import { Input } from '@components/Input';
-import { Button } from '@components/Button';
+
+import { Input } from '@components/Input'
+import { Button } from '@components/Button'
 
 export function SignIn() {
+    const navigation = useNavigation<AuthNavigatorRoutesProps>()
+
+    function handleNewAccount() {
+        try {
+            navigation.navigate('signUp')
+        } catch (error) {
+            console.error('Navigation error:', error)
+        }
+    }
+
     return (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
             <VStack flex={1} bg="gray.700" px={10} pb={16}>
@@ -38,7 +52,9 @@ export function SignIn() {
                         secureTextEntry
                     />
 
-                    <Button title="Acessar" />
+                    <Button
+                        title="Acessar"
+                    />
                 </Center>
 
 
@@ -51,6 +67,7 @@ export function SignIn() {
                     <Button
                         title="Criar conta"
                         variant="outline"
+                        onPress={handleNewAccount}
                     />
                 </Center>
 
