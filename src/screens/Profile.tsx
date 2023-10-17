@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { TouchableOpacity } from 'react-native'
-import { Center, VStack, Heading, ScrollView, Skeleton } from 'native-base'
+import { Center, VStack, Heading, ScrollView, Skeleton, useToast } from 'native-base'
+
+import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system'
 
 import { Avatar } from '@components/Avatar'
 import { Button } from '@components/Button'
@@ -9,8 +12,46 @@ import { ScreensHeader } from '@components/ScreensHeader'
 
 export function Profile() {
     const [userPhotoIsLoading, setUserPhotoIsLoading] = useState(false)
+    const [userPhoto, setUserPhoto] = useState("http://github.com/jose-xavier.png")
 
     const PHOTO_SIZE = 33
+
+    const toast = useToast()
+
+    async function handleSelectUserPhoto() {
+        try {
+            setUserPhotoIsLoading(true)
+            const photoSelected = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 4],
+                quality: 1
+            })
+
+            if (photoSelected.canceled) {
+                return
+            }
+
+            if (photoSelected.assets[0].uri) {
+                const photoInfo = await FileSystem.getInfoAsync(photoSelected.assets[0].uri)
+
+                if (photoInfo.exists && (photoInfo.size / 1024 / 1024 > 5)) {
+                    return toast.show({
+                        title: 'Essa imagem é muito grande. Escolha uma de até 5MB',
+                        placement: 'top',
+                        bgColor: 'red.500'
+                    })
+                }
+            }
+
+            setUserPhoto(photoSelected.assets[0].uri)
+
+        } catch (error) {
+            console.log(error)
+        } finally {
+            setUserPhotoIsLoading(false)
+        }
+    }
 
     return (
         <VStack flex={1}>
@@ -31,14 +72,14 @@ export function Profile() {
                             />
                             :
                             <Avatar
-                                source={{ uri: "http://github.com/jose-xavier.png" }}
+                                source={{ uri: userPhoto }}
                                 alt="Foto do usuario"
                                 size={PHOTO_SIZE}
                                 rounded="full"
                             />
                     }
 
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={handleSelectUserPhoto}>
                         <Heading color="green.500" fontSize="md" mt={3} mb={6}>
                             Alterar foto
                         </Heading>
