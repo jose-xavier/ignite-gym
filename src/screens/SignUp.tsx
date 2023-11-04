@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { Center, Heading, Image, ScrollView, Text, VStack, useToast } from 'native-base'
 import { useNavigation } from '@react-navigation/native'
+import { useAuth } from '@hooks/useAuth'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { api } from '@services/api'
-import axios from 'axios'
 import * as yup from "yup"
 
 import { AppError } from '@utils/AppError'
@@ -13,6 +14,7 @@ import Logo from './../assets/logo.svg'
 
 import { Input } from '@components/Input'
 import { Button } from '@components/Button'
+
 
 type FormDataProps = {
     name: string
@@ -30,6 +32,10 @@ const signUpSchema = yup.object({
 
 
 export function SignUp() {
+    const [isLoading, setIsLoading] = useState(false)
+
+    const { signIn } = useAuth()
+
     const { control, handleSubmit, formState: { errors } } = useForm<FormDataProps>({
         resolver: yupResolver(signUpSchema)
     })
@@ -42,15 +48,18 @@ export function SignUp() {
 
     async function handleSignUp({ name, email, password }: FormDataProps) {
         try {
-            const response = await api.post('/users', {
+            setIsLoading(true)
+
+            await api.post('/users', {
                 name,
                 email,
                 password
             })
 
-            console.log(response.data)
+            await signIn(email, password)
 
         } catch (error) {
+            setIsLoading(false)
             const isAppError = error instanceof AppError
             const title = isAppError ? error.message : 'Não foi possível criar a conta tente mais tarde.'
 

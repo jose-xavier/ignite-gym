@@ -1,4 +1,7 @@
-import { Center, Heading, Image, ScrollView, Text, VStack } from 'native-base'
+import { useState } from 'react';
+import { Center, Heading, Image, ScrollView, Text, VStack, useToast } from 'native-base'
+import { useAuth } from '@hooks/useAuth';
+import { AppError } from '@utils/AppError';
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from "yup"
@@ -24,6 +27,10 @@ const signInSchema = yup.object({
 })
 
 export function SignIn() {
+    const [isLoading, setIsLoading] = useState(false)
+    const { signIn } = useAuth()
+    const toast = useToast()
+
     const { control, handleSubmit, formState: { errors } } = useForm<FormDataProps>({
         resolver: yupResolver(signInSchema)
     })
@@ -37,8 +44,23 @@ export function SignIn() {
         }
     }
 
-    function handleSignIn(data: FormDataProps) {
-        console.log(data)
+    async function handleSignIn({ email, password }: FormDataProps) {
+        try {
+            setIsLoading(true)
+            await signIn(email, password)
+
+        } catch (error) {
+            const isAppError = error instanceof AppError
+            const title = isAppError ? error.message : 'Não foi possível fazer o login. Tente mais tarde!'
+
+            setIsLoading(false)
+
+            toast.show({
+                title: title,
+                placement: 'top',
+                bgColor: 'red.500'
+            })
+        }
     }
 
     return (
@@ -99,6 +121,7 @@ export function SignIn() {
                     <Button
                         title="Acessar"
                         onPress={handleSubmit(handleSignIn)}
+                        isLoading={isLoading}
                     />
                 </Center>
 
