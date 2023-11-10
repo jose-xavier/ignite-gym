@@ -10,6 +10,7 @@ type AuthContextDataProps = {
     signIn: (email: string, password: string) => Promise<void>
     signOut: () => Promise<void>
     isLoadingUserStorage: boolean
+    updateUserProfile: (userUpdated: UserDTO) => Promise<void>
 }
 
 type AuthContextProviderProps = {
@@ -25,6 +26,16 @@ export function AuthContextProvider({ children }: AuthContextProviderProps) {
     function userAndTokenUpdate(userData: UserDTO, token: string) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
         setUser(userData)
+    }
+
+    async function updateUserProfile(userUpdated: UserDTO) {
+        try {
+            setUser(userUpdated)
+            await storageUserSave(userUpdated)
+
+        } catch (error) {
+            throw error
+        }
     }
 
     async function storageUserAndTokenSave(userData: UserDTO, token: string) {
@@ -95,7 +106,8 @@ export function AuthContextProvider({ children }: AuthContextProviderProps) {
             user,
             signIn,
             signOut,
-            isLoadingUserStorage
+            isLoadingUserStorage,
+            updateUserProfile
         }}>
             {children}
         </AuthContext.Provider >

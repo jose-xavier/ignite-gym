@@ -2,21 +2,102 @@ import { useState } from 'react'
 import { TouchableOpacity } from 'react-native'
 import { Center, VStack, Heading, ScrollView, Skeleton, useToast } from 'native-base'
 
+import { useForm, Controller } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { api } from '@services/api'
+import { useAuth } from '@hooks/useAuth'
+import * as yup from 'yup'
+import { AppError } from '@utils/AppError'
+
 import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system'
+
+import defaultUserPhotoImg from '../assets/userPhotoDefault.png'
 
 import { Avatar } from '@components/Avatar'
 import { Button } from '@components/Button'
 import { Input } from '@components/Input'
 import { ScreensHeader } from '@components/ScreensHeader'
 
+type FormDataProps = {
+    name: string;
+    email: string;
+    password: string;
+    old_password: string;
+    confirm_password: string;
+}
+
+const profileSchema = yup.object({
+    name: yup
+        .string()
+        .required('Informe o nome'),
+    password: yup
+        .string()
+        .min(6, 'A senha deve ter pelo menos 6 dígitos.')
+        .nullable()
+        .transform((value) => !!value ? value : null),
+    confirm_password: yup
+        .string()
+        .nullable()
+        .transform((value) => !!value ? value : null)
+        .oneOf([yup.ref('password'), null], 'A confirmação de senha não confere.')
+        .when('password', {
+            is: (Field: any) => Field,
+            then: yup
+                .string()
+                .nullable()
+                .required('Informe a confirmação da senha.')
+                .transform((value) => !!value ? value : null)
+        }),
+})
+
 export function Profile() {
+    const [isUpdating, setIsUpdating] = useState(false)
     const [userPhotoIsLoading, setUserPhotoIsLoading] = useState(false)
-    const [userPhoto, setUserPhoto] = useState("http://github.com/jose-xavier.png")
+    const [userPhoto, setUserPhoto] = useState()
+
+    const toast = useToast()
+    const { user, updateUserProfile } = useAuth()
 
     const PHOTO_SIZE = 33
 
-    const toast = useToast()
+    const { control, handleSubmit, formState: { errors } } = useForm<FormDataProps>({
+        defaultValues: {
+            name: user.name,
+            email: user.email
+        },
+        resolver: yupResolver(profileSchema)
+    })
+
+    async function handleUserUpdate(data: FormDataProps) {
+        try {
+            setIsUpdating(true)
+
+            const userUpdated = user
+            userUpdated.name = data.name
+
+            await api.put('/users', data)
+            await updateUserProfile(userUpdated)
+
+            toast.show({
+                title: 'Perfil atualizado com sucesso!',
+                placement: 'top',
+                bgColor: 'green.500'
+            })
+
+        } catch (error) {
+            const isAppError = error instanceof AppError
+            const title = isAppError ? error.message : 'Não foi possível atualizar as informações do usuário.'
+
+            toast.show({
+                title: title,
+                placement: 'top',
+                bgColor: 'red.500'
+            })
+        } finally {
+            setIsUpdating(false)
+        }
+    }
 
     async function handleSelectUserPhoto() {
         try {
@@ -25,7 +106,8 @@ export function Profile() {
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [4, 4],
-                quality: 1
+                quality: 1,
+                selectionLimit: 1
             })
 
             if (photoSelected.canceled) {
@@ -44,7 +126,28 @@ export function Profile() {
                 }
             }
 
-            setUserPhoto(photoSelected.assets[0].uri)
+            const fileExtension = photoSelected.assets[0].uri.split('.').pop()
+
+            const photoFile = {
+                name: `${user.name}.${fileExtension}`.toLowerCase(),
+                uri: photoSelected.assets[0].uri,
+                type: `${photoSelected.assets[0].type}/${fileExtension}`
+            } as any
+
+            const userPhotoUploadForm = new FormData()
+
+            userPhotoUploadForm.append('avatar', photoFile)
+
+            const userPhotoDataResponse = await api.patch('users/avatar', userPhotoUploadForm, {
+                headers: {
+                    'Content- Type': 'multipart/form-data'
+                }
+            })
+
+            const userUpdated = user
+            userUpdated.avatar = userPhotoDataResponse.data.avatar
+
+            await updateUserProfile(userUpdated)
 
         } catch (error) {
             console.log(error)
@@ -72,7 +175,9 @@ export function Profile() {
                             />
                             :
                             <Avatar
-                                source={{ uri: userPhoto }}
+                                source={user.avatar
+                                    ? { uri: `${api.defaults.baseURL}/avatar/${user.avatar}` }
+                                    : defaultUserPhotoImg}
                                 alt="Foto do usuario"
                                 size={PHOTO_SIZE}
                                 rounded="full"
@@ -87,17 +192,39 @@ export function Profile() {
                 </Center>
 
                 <VStack px={10}>
-                    <Input
-                        placeholder="Nome"
-                        bg="gray.600"
+
+
+                    <Controller
+                        name="name"
+                        control={control}
+                        render={({ field: { onChange, value } }) => (
+                            <Input
+                                placeholder="Nome"
+                                bg="gray.600"
+                                value={value}
+                                onChangeText={onChange}
+                                errorMessage={errors.name?.message}
+                            />
+                        )}
                     />
 
-                    <Input
-                        placeholder="nettoxavier23@gmail.com"
-                        isDisabled
-                        _disabled={{
-                            bg: "gray.500"
-                        }}
+                    <Controller
+                        control={control}
+                        name="email"
+                        render={({ field: { onChange, value } }) => (
+                            <Input
+                                bg="gray.600"
+                                placeholder="E-mail"
+                                isDisabled
+                                _disabled={{
+                                    bgColor: 'gray.500'
+                                }}
+                                isReadOnly
+                                onChangeText={onChange}
+                                value={value}
+                                errorMessage={errors.email?.message}
+                            />
+                        )}
                     />
                 </VStack>
 
@@ -106,26 +233,56 @@ export function Profile() {
                         Alterar senha
                     </Heading>
 
-                    <Input
-                        placeholder="Senha antiga"
-                        bg="gray.600"
-                        secureTextEntry
+                    <Controller
+                        name="old_password"
+                        control={control}
+                        render={({ field: { onChange } }) => (
+                            <Input
+                                placeholder="Senha antiga"
+                                bg="gray.600"
+                                onChangeText={onChange}
+                                errorMessage={errors.old_password?.message}
+                                secureTextEntry
+                            />
+                        )}
                     />
 
-                    <Input
-                        placeholder="Nova senha"
-                        bg="gray.600"
-                        secureTextEntry
+                    <Controller
+                        name="password"
+                        control={control}
+                        render={({ field: { onChange } }) => (
+                            <Input
+                                placeholder="Nova senha"
+                                bg="gray.600"
+                                secureTextEntry
+                                onChangeText={onChange}
+                                errorMessage={errors.password?.message}
+                            />
+
+                        )}
                     />
 
-                    <Input
-                        placeholder="Confirme a nova senha"
-                        bg="gray.600"
-                        secureTextEntry
+                    <Controller
+                        name="confirm_password"
+                        control={control}
+                        render={({ field: { onChange } }) => (
+
+                            <Input
+                                placeholder="Confirme a nova senha"
+                                bg="gray.600"
+                                secureTextEntry
+                                onChangeText={onChange}
+                                errorMessage={errors.confirm_password?.message}
+                            />
+                        )}
                     />
+
+
 
                     <Button
+                        onPress={handleSubmit(handleUserUpdate)}
                         title="Atualizar"
+                        isLoading={isUpdating}
                         mt={6}
                     />
                 </VStack>

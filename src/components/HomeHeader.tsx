@@ -2,6 +2,7 @@ import { HStack, VStack, Text, Heading, Icon } from 'native-base'
 import { TouchableOpacity } from 'react-native'
 
 import { useAuth } from '@hooks/useAuth'
+import { api } from '@services/api'
 
 import { MaterialIcons } from '@expo/vector-icons'
 import { Avatar } from './Avatar'
@@ -13,7 +14,9 @@ export function HomeHeader() {
     return (
         <HStack bg="gray.600" px={8} pt={16} pb={5} alignItems="center">
             <Avatar
-                source={user.avatar ? { uri: user.avatar } : defaultUserPhotoImg}
+                source={user.avatar
+                    ? { uri: `${api.defaults.baseURL}/avatar/${user.avatar}` }
+                    : defaultUserPhotoImg}
                 size={16}
             />
             <VStack flex={1} ml={4}>

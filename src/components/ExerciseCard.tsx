@@ -1,28 +1,38 @@
-import { TouchableOpacity } from 'react-native'
+import { TouchableOpacity, TouchableOpacityProps } from 'react-native'
 import { HStack, Heading, Icon, Image, Text, VStack } from 'native-base'
+
+import { ExerciseDTO } from '@dtos/ExerciseDTO'
+import { api } from '@services/api'
 
 import { Entypo } from '@expo/vector-icons'
 
-export function ExerciseCard() {
-    return (
-        <HStack bg="gray.500" p={2} rounded="md" alignItems="center" mb={3}>
-            <Image
-                source={{ uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSDcgUueK2HZPalWhdGbEOylLsudEeYcBjqXx7fRL-xXzyQxBk_rMzpMisfMTDaWF79Xgg&usqp=CAU' }}
-                h={16}
-                w={16}
-                alt="Foto do exercício"
-                rounded="sm"
-            />
-            <VStack flex={1} ml={4}>
-                <Heading color="white" fontSize="lg" fontFamily="heading">
-                    Puxada Frontal
-                </Heading>
-                <Text color="gray.200" fontSize="sm">
-                    3 séries x 12 repetições
-                </Text>
-            </VStack>
+type Props = TouchableOpacityProps & {
+    data: ExerciseDTO
+}
 
-            <TouchableOpacity>
+
+export function ExerciseCard({ data, ...rest }: Props) {
+
+    return (
+        <TouchableOpacity {...rest}>
+            <HStack bg="gray.500" p={2} rounded="md" alignItems="center" mb={3}>
+                <Image
+                    source={{ uri: `${api.defaults.baseURL}/exercise/thumb/${data.thumb}` }}
+                    h={16}
+                    w={16}
+                    alt="Foto do exercício"
+                    rounded="sm"
+                />
+                <VStack flex={1} ml={4}>
+                    <Heading color="white" fontSize="lg" fontFamily="heading">
+                        {data.name}
+                    </Heading>
+                    <Text color="gray.200" fontSize="sm">
+                        {`${data.series} séries x ${data.repetitions} repetições`}
+                    </Text>
+                </VStack>
+
+
                 <Icon
                     as={Entypo}
                     name='chevron-thin-right'
@@ -30,7 +40,8 @@ export function ExerciseCard() {
                     mr={2}
                     size={5}
                 />
-            </TouchableOpacity>
-        </HStack>
+
+            </HStack>
+        </TouchableOpacity>
     )
 }
