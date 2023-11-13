@@ -64,7 +64,7 @@ export function History() {
                     ListEmptyComponent={() => (
                         <Center>
                             <Text color="gray.100" textAlign="center">
-                                Não há exercícios registrados ainda. {'/n'}
+                                Não há exercícios registrados ainda. {'\n'}
                                 Vamos fazer exercícios hoje?
                             </Text>
                         </Center>
